@@ -26,7 +26,7 @@ export default app;
 const proxy = (_url: string) => {
 	const url = new URL(_url);
 	url.protocol = 'https';
-	url.hostname = 'lifedot.jp';
+	url.hostname = '<your site hostname>';
 	url.port = '';
 
 	return url;
