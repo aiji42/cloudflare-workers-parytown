@@ -4,8 +4,21 @@ import { HTMLRewriterElementContentHandlers } from '@cloudflare/workers-types/20
 const app = new Hono();
 
 app.get('/~partytown/:file', (c, next) => {
-	console.log(c.req.param('file'));
 	return fetch(`https://www.unpkg.com/@builder.io/partytown@0.8.1/lib/${c.req.param('file')}`, { cf: { cacheEverything: true } });
+});
+
+app.get('/proxy', async (c) => {
+	const url = c.req.query('url');
+	if (!url) return c.notFound();
+
+	const res = await fetch(url, c.req.raw);
+
+	return new Response(res.body, {
+		headers: {
+			...Object.fromEntries(res.headers.entries()),
+			'Access-Control-Allow-Origin': '*',
+		},
+	});
 });
 
 app.all('*', async (c) => {
@@ -59,7 +72,19 @@ class GTMToPartytown implements HTMLRewriterElementContentHandlers {
 			cf: { cacheEverything: true },
 		});
 		element.prepend(
-			`<script>${await partytownScript.text()}</script><script><script>partytown = { forward: ["dataLayer.push"] }</script></script>`,
+			`<script>${await partytownScript.text()}</script><script>
+partytown = {
+	forward: ["dataLayer.push"],
+	resolveUrl: function (url, location, type) {
+    if (type === 'script' && !url.href.startsWith('https://www.googletagmanager.com')) {
+			var proxyUrl = new URL(location.origin);
+			proxyUrl.pathname = '/proxy'
+      proxyUrl.searchParams.append('url', url.href);
+      return proxyUrl;
+    }
+    return url;
+  },
+}</script>`,
 			{ html: true },
 		);
 		this.scripts.forEach((script) => {
