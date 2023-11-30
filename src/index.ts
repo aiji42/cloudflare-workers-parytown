@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { HTMLRewriterElementContentHandlers } from '@cloudflare/workers-types/2022-08-04/index';
 
 const app = new Hono();
 
